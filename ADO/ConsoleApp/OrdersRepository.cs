@@ -82,12 +82,13 @@ namespace ConsoleApp
             }
         }
 
-        public void CreateOrder(CreateOrderParams parameters)
+        public int CreateOrder(CreateOrderParams parameters)
         {
             using (SqlConnection connection = new(this._connectionString))
             {
                 SqlCommand command = new(
-                    "INSERT INTO Orders (Status, CreatedDate, UpdatedDate, ProductId)" +
+                    "INSERT INTO Orders (Status, CreatedDate, UpdatedDate, ProductId) " +
+                    "OUTPUT INSERTED.Id " +
                     "VALUES (@Status, @CreatedDate, @UpdatedDate, @ProductId);", connection);
 
                 command.Parameters.AddWithValue("Status", parameters.Status.ToString());
@@ -96,7 +97,7 @@ namespace ConsoleApp
                 command.Parameters.AddWithValue("ProductId", parameters.ProductId);
 
                 connection.Open();
-                command.ExecuteNonQuery();
+                return (int) command.ExecuteScalar();
             }
         }
 

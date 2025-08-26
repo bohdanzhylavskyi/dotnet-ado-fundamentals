@@ -3,7 +3,8 @@ using System.Transactions;
 
 namespace ADO.Tests
 {
-    public class ProductsRepositoryTests : IClassFixture<DatabaseFixture>
+    [Collection("Database collection")]
+    public class ProductsRepositoryTests
     {
         private readonly DatabaseFixture _fixture;
 
