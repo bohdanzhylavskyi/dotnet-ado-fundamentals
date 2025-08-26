@@ -39,6 +39,8 @@ namespace ConsoleApp
         public required int ProductId;
     }
 
+    public delegate SqlCommand SearchOrdersCommandFactory(SqlConnection connection);
+
     public class OrdersRepository
     {
         private string _connectionString;
@@ -134,6 +136,62 @@ namespace ConsoleApp
             }
         }
 
+        public List<Order> SearchOrdersByMonth(int month)
+        {
+            SearchOrdersCommandFactory searchCommandFactory = (SqlConnection connection) =>
+            {
+                SqlCommand command = new("SELECT * FROM Orders WHERE MONTH(CreatedDate) = @Month;", connection);
+                command.Parameters.AddWithValue("Month", month);
+
+                return command;
+            };
+
+
+            return SearchOrders(searchCommandFactory);
+        }
+
+        public List<Order> SearchOrdersByYear(int year)
+        {
+            SearchOrdersCommandFactory searchCommandFactory = (SqlConnection connection) =>
+            {
+                SqlCommand command = new("SELECT * FROM Orders WHERE YEAR(CreatedDate) = @Year;", connection);
+                command.Parameters.AddWithValue("Year", year);
+
+                return command;
+            };
+
+
+            return SearchOrders(searchCommandFactory);
+        }
+
+        public List<Order> SearchOrdersByStatus(OrderStatus status)
+        {
+            SearchOrdersCommandFactory searchCommandFactory = (SqlConnection connection) =>
+            {
+                SqlCommand command = new("SELECT * FROM Orders WHERE Status = @Status;", connection);
+                command.Parameters.AddWithValue("Status", status.ToString());
+
+                return command;
+            };
+
+
+            return SearchOrders(searchCommandFactory);
+        }
+
+        public List<Order> SearchOrdersByProduct(int productId)
+        {
+            SearchOrdersCommandFactory searchCommandFactory = (SqlConnection connection) =>
+            {
+                SqlCommand command = new("SELECT * FROM Orders WHERE ProductId = @ProductId;", connection);
+                command.Parameters.AddWithValue("ProductId", productId);
+
+                return command;
+            };
+
+
+            return SearchOrders(searchCommandFactory);
+        }
+
         public List<Order> ListOrders()
         {
             using (SqlConnection connection = new(_connectionString))
@@ -165,5 +223,48 @@ namespace ConsoleApp
                 return result;
             }
         }
+
+        private List<Order> SearchOrders(SearchOrdersCommandFactory commandFactory)
+        {
+            using (SqlConnection connection = new(_connectionString))
+            {
+                SqlCommand command = commandFactory(connection);
+
+                connection.Open();
+
+                SqlDataReader reader = command.ExecuteReader();
+                var result = new List<Order>();
+
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        result.Add(new Order()
+                        {
+                            Id = reader.GetInt32("Id"),
+                            Status = Enum.Parse<OrderStatus>(reader.GetString("Status")),
+                            CreatedDate = reader.GetDateTime("CreatedDate"),
+                            UpdatedDate = reader.GetDateTime("UpdatedDate"),
+                            ProductId = reader.GetInt32("ProductId"),
+                        });
+                    }
+                }
+
+                reader.Close();
+
+                return result;
+            }
+        }
+    }
+
+    public enum OrdersSearchCriteriaType
+    {
+        ByMonth,
+        ByYear,
+    }
+
+    public class OrdersByMonthSearchCriteria
+    {
+
     }
 }
