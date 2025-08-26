@@ -1,10 +1,10 @@
 ﻿CREATE TABLE [dbo].[Products]
 (
 	[Id] INT NOT NULL PRIMARY KEY IDENTITY, 
-    [Name] NCHAR(20) NOT NULL, 
-    [Description] NCHAR(20) NOT NULL, 
-    [Weight] DECIMAL(3, 2) NOT NULL, 
-    [Height] DECIMAL(3, 2) NOT NULL, 
-    [Width] DECIMAL(3, 2) NOT NULL, 
-    [Length] DECIMAL(3, 2) NOT NULL
+    [Name] NVARCHAR(30) NOT NULL, 
+    [Description] NVARCHAR(30) NOT NULL, 
+    [Weight] DECIMAL(6, 3) NOT NULL, 
+    [Height] DECIMAL(6, 3) NOT NULL, 
+    [Width] DECIMAL(6, 3) NOT NULL, 
+    [Length] DECIMAL(6, 3) NOT NULL
 )
