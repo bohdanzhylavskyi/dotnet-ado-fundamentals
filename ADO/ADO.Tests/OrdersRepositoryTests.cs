@@ -291,5 +291,157 @@ namespace ADO.Tests
                 Assert.Contains(orders, (p) => p.Id == id2);
             }
         }
+
+        [Fact]
+        public void DeleteOrdersByMonth()
+        {
+            var repository = new OrdersRepository(this._fixture.ConnectionString);
+
+            using (var scope = new TransactionScope())
+            {
+                this._fixture.AddProducts();
+
+                var createParams1 = new CreateOrderParams()
+                {
+                    ProductId = _fixture.product1.Id,
+                    CreatedDate = DateTime.Parse("01/26/2025 2:30:00 PM"),
+                    UpdatedDate = DateTime.Parse("01/26/2025 2:30:00 PM"),
+                    Status = OrderStatus.NotStarted,
+                };
+
+                var id1 = repository.CreateOrder(createParams1);
+
+                var createParams2 = new CreateOrderParams()
+                {
+                    ProductId = _fixture.product2.Id,
+                    CreatedDate = DateTime.Parse("08/26/2025 2:30:00 PM"),
+                    UpdatedDate = DateTime.Parse("08/26/2025 2:30:00 PM"),
+                    Status = OrderStatus.Arrived,
+                };
+
+                var id2 = repository.CreateOrder(createParams2);
+
+                repository.DeleteOrdersByMonth(1);
+
+                var orders = repository.ListOrders();
+
+                Assert.Equal(1, orders.Count);
+                Assert.Contains(orders, (p) => p.Id == id2);
+            }
+        }
+
+        [Fact]
+        public void DeleteOrdersByYear()
+        {
+            var repository = new OrdersRepository(this._fixture.ConnectionString);
+
+            using (var scope = new TransactionScope())
+            {
+                this._fixture.AddProducts();
+
+                var createParams1 = new CreateOrderParams()
+                {
+                    ProductId = _fixture.product1.Id,
+                    CreatedDate = DateTime.Parse("01/26/2020 2:30:00 PM"),
+                    UpdatedDate = DateTime.Parse("01/26/2020 2:30:00 PM"),
+                    Status = OrderStatus.NotStarted,
+                };
+
+                var id1 = repository.CreateOrder(createParams1);
+
+                var createParams2 = new CreateOrderParams()
+                {
+                    ProductId = _fixture.product2.Id,
+                    CreatedDate = DateTime.Parse("08/26/2026 2:30:00 PM"),
+                    UpdatedDate = DateTime.Parse("08/26/2026 2:30:00 PM"),
+                    Status = OrderStatus.Arrived,
+                };
+
+                var id2 = repository.CreateOrder(createParams2);
+
+                repository.DeleteOrdersByYear(2020);
+
+                var orders = repository.ListOrders();
+
+                Assert.Equal(1, orders.Count);
+                Assert.Contains(orders, (p) => p.Id == id2);
+            }
+        }
+
+        [Fact]
+        public void DeleteOrdersByStatus()
+        {
+            var repository = new OrdersRepository(this._fixture.ConnectionString);
+
+            using (var scope = new TransactionScope())
+            {
+                this._fixture.AddProducts();
+
+                var createParams1 = new CreateOrderParams()
+                {
+                    ProductId = _fixture.product1.Id,
+                    CreatedDate = DateTime.Parse("01/26/2020 2:30:00 PM"),
+                    UpdatedDate = DateTime.Parse("01/26/2020 2:30:00 PM"),
+                    Status = OrderStatus.NotStarted,
+                };
+
+                var id1 = repository.CreateOrder(createParams1);
+
+                var createParams2 = new CreateOrderParams()
+                {
+                    ProductId = _fixture.product2.Id,
+                    CreatedDate = DateTime.Parse("08/26/2026 2:30:00 PM"),
+                    UpdatedDate = DateTime.Parse("08/26/2026 2:30:00 PM"),
+                    Status = OrderStatus.Arrived,
+                };
+
+                var id2 = repository.CreateOrder(createParams2);
+
+                repository.DeleteOrdersByStatus(OrderStatus.NotStarted);
+
+                var orders = repository.ListOrders();
+
+                Assert.Equal(1, orders.Count);
+                Assert.Contains(orders, (p) => p.Id == id2);
+            }
+        }
+
+        [Fact]
+        public void DeleteOrdersByProduct()
+        {
+            var repository = new OrdersRepository(this._fixture.ConnectionString);
+
+            using (var scope = new TransactionScope())
+            {
+                this._fixture.AddProducts();
+
+                var createParams1 = new CreateOrderParams()
+                {
+                    ProductId = _fixture.product1.Id,
+                    CreatedDate = DateTime.Parse("01/26/2020 2:30:00 PM"),
+                    UpdatedDate = DateTime.Parse("01/26/2020 2:30:00 PM"),
+                    Status = OrderStatus.NotStarted,
+                };
+
+                var id1 = repository.CreateOrder(createParams1);
+
+                var createParams2 = new CreateOrderParams()
+                {
+                    ProductId = _fixture.product2.Id,
+                    CreatedDate = DateTime.Parse("08/26/2026 2:30:00 PM"),
+                    UpdatedDate = DateTime.Parse("08/26/2026 2:30:00 PM"),
+                    Status = OrderStatus.Arrived,
+                };
+
+                var id2 = repository.CreateOrder(createParams2);
+
+                repository.DeleteOrdersByProduct(_fixture.product1.Id);
+
+                var orders = repository.ListOrders();
+
+                Assert.Equal(1, orders.Count);
+                Assert.Contains(orders, (p) => p.Id == id2);
+            }
+        }
     }
 }

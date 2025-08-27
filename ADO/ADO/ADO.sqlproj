@@ -62,6 +62,8 @@
     <Build Include="Orders.sql" />
     <Build Include="CreateProduct.sql" />
     <Build Include="CreateOrder.sql" />
+    <Build Include="SearchOrdersProcedure.sql" />
+    <Build Include="DeleteOrdersProcedure.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ADO.publish.xml" />

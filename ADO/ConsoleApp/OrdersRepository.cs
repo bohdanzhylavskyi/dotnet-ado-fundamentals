@@ -39,7 +39,19 @@ namespace ConsoleApp
         public required int ProductId;
     }
 
-    public delegate SqlCommand SearchOrdersCommandFactory(SqlConnection connection);
+    public struct OrderFilters
+    {
+        public int? Month { get; init; } = null;
+        public int? Year { get; init; } = null;
+        public OrderStatus? Status { get; init; } = null;
+
+        public int? ProductId { get; init; } = null;
+        public OrderFilters()
+        {
+        }
+    }
+
+    public delegate SqlCommand CommandFactory(SqlConnection connection);
 
     public class OrdersRepository
     {
@@ -99,7 +111,7 @@ namespace ConsoleApp
                 command.Parameters.AddWithValue("ProductId", parameters.ProductId);
 
                 connection.Open();
-                return (int) command.ExecuteScalar();
+                return (int)command.ExecuteScalar();
             }
         }
 
@@ -138,58 +150,42 @@ namespace ConsoleApp
 
         public List<Order> SearchOrdersByMonth(int month)
         {
-            SearchOrdersCommandFactory searchCommandFactory = (SqlConnection connection) =>
+            var filters = new OrderFilters()
             {
-                SqlCommand command = new("SELECT * FROM Orders WHERE MONTH(CreatedDate) = @Month;", connection);
-                command.Parameters.AddWithValue("Month", month);
-
-                return command;
+                Month = month
             };
 
-
-            return SearchOrders(searchCommandFactory);
+            return SearchOrders(filters);
         }
 
         public List<Order> SearchOrdersByYear(int year)
         {
-            SearchOrdersCommandFactory searchCommandFactory = (SqlConnection connection) =>
+            var filters = new OrderFilters()
             {
-                SqlCommand command = new("SELECT * FROM Orders WHERE YEAR(CreatedDate) = @Year;", connection);
-                command.Parameters.AddWithValue("Year", year);
-
-                return command;
+                Year = year
             };
 
-
-            return SearchOrders(searchCommandFactory);
+            return SearchOrders(filters);
         }
 
         public List<Order> SearchOrdersByStatus(OrderStatus status)
         {
-            SearchOrdersCommandFactory searchCommandFactory = (SqlConnection connection) =>
+            var filters = new OrderFilters()
             {
-                SqlCommand command = new("SELECT * FROM Orders WHERE Status = @Status;", connection);
-                command.Parameters.AddWithValue("Status", status.ToString());
-
-                return command;
+                Status = status
             };
 
-
-            return SearchOrders(searchCommandFactory);
+            return SearchOrders(filters);
         }
 
         public List<Order> SearchOrdersByProduct(int productId)
         {
-            SearchOrdersCommandFactory searchCommandFactory = (SqlConnection connection) =>
+            var filters = new OrderFilters()
             {
-                SqlCommand command = new("SELECT * FROM Orders WHERE ProductId = @ProductId;", connection);
-                command.Parameters.AddWithValue("ProductId", productId);
-
-                return command;
+                ProductId = productId
             };
 
-
-            return SearchOrders(searchCommandFactory);
+            return SearchOrders(filters);
         }
 
         public List<Order> ListOrders()
@@ -224,13 +220,64 @@ namespace ConsoleApp
             }
         }
 
-        private List<Order> SearchOrders(SearchOrdersCommandFactory commandFactory)
+        public void DeleteOrdersByMonth(int month)
+        {
+            var filters = new OrderFilters()
+            {
+                Month = month
+            };
+
+            DeleteOrders(filters);
+        }
+
+        public void DeleteOrdersByYear(int year)
+        {
+            var filters = new OrderFilters()
+            {
+                Year = year
+            };
+
+            DeleteOrders(filters);
+        }
+
+        public void DeleteOrdersByStatus(OrderStatus status)
+        {
+            var filters = new OrderFilters()
+            {
+                Status = status
+            };
+
+            DeleteOrders(filters);
+        }
+
+        public void DeleteOrdersByProduct(int productId)
+        {
+            var filters = new OrderFilters()
+            {
+                ProductId = productId
+            };
+
+            DeleteOrders(filters);
+        }
+
+        private List<Order> SearchOrders(OrderFilters filters)
         {
             using (SqlConnection connection = new(_connectionString))
             {
-                SqlCommand command = commandFactory(connection);
-
                 connection.Open();
+
+                SqlCommand command = new SqlCommand()
+                {
+                    CommandText = "SearchOrders",
+                    CommandType = CommandType.StoredProcedure,
+                    Connection = connection
+                };
+
+                if (filters.Month is not null) command.Parameters.AddWithValue("Month", filters.Month);
+                if (filters.Year is not null) command.Parameters.AddWithValue("Year", filters.Year);
+                if (filters.Status is not null) command.Parameters.AddWithValue("Status", filters.Status.ToString());
+                if (filters.ProductId is not null) command.Parameters.AddWithValue("ProductId", filters.ProductId);
+
 
                 SqlDataReader reader = command.ExecuteReader();
                 var result = new List<Order>();
@@ -255,16 +302,27 @@ namespace ConsoleApp
                 return result;
             }
         }
-    }
 
-    public enum OrdersSearchCriteriaType
-    {
-        ByMonth,
-        ByYear,
-    }
+        private void DeleteOrders(OrderFilters filters)
+        {
+            using (SqlConnection connection = new(this._connectionString))
+            {
+                connection.Open();
 
-    public class OrdersByMonthSearchCriteria
-    {
+                SqlCommand command = new SqlCommand()
+                {
+                    CommandText = "DeleteOrders",
+                    CommandType = CommandType.StoredProcedure,
+                    Connection = connection
+                };
 
+                if (filters.Month is not null) command.Parameters.AddWithValue("Month", filters.Month);
+                if (filters.Year is not null) command.Parameters.AddWithValue("Year", filters.Year);
+                if (filters.Status is not null) command.Parameters.AddWithValue("Status", filters.Status.ToString());
+                if (filters.ProductId is not null) command.Parameters.AddWithValue("ProductId", filters.ProductId);
+
+                command.ExecuteNonQuery();
+            }
+        }
     }
 }
