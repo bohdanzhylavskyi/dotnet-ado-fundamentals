@@ -1,7 +1,7 @@
 ﻿using Microsoft.Data.SqlClient;
 using System.Data;
 
-namespace ConsoleApp
+namespace ADO.Lib
 {
     public enum OrderStatus
     {

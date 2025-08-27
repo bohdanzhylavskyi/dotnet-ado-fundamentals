@@ -1,4 +1,4 @@
-﻿using ConsoleApp;
+﻿using ADO.Lib;
 using Microsoft.Data.SqlClient;
 using Microsoft.SqlServer.Dac;
 
@@ -91,7 +91,7 @@ public class DatabaseFixture : IDisposable
 
     private void DeployDatabase()
     {
-        string dacpacPath = @"..\..\..\..\ADO\bin\Debug\ADO.dacpac";
+        string dacpacPath = @"..\..\..\..\ADO.DB\bin\Debug\ADO.dacpac";
 
         using var dacpac = DacPackage.Load(dacpacPath);
         var dacServices = new DacServices(ServerConnectionString);
