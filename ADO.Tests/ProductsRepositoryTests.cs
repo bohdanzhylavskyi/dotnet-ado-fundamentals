@@ -24,6 +24,7 @@ namespace ADO.Tests
                 var createParams = GetCreateProductParams();
 
                 var id = productsRepository.CreateProduct(createParams);
+                productsRepository.Save();
 
                 var product = productsRepository.GetProduct(id);
 
@@ -53,6 +54,7 @@ namespace ADO.Tests
                 };
 
                 productsRepository.UpdateProduct(id, updateParams);
+                productsRepository.Save();
 
                 var expectedUpdatedProduct = new Product()
                 {
@@ -81,8 +83,10 @@ namespace ADO.Tests
                 var createParams = GetCreateProductParams();
 
                 var id = productsRepository.CreateProduct(createParams);
+                productsRepository.Save();
 
                 productsRepository.DeleteProduct(id);
+                productsRepository.Save();
 
                 var products = productsRepository.ListProducts();
 
@@ -102,6 +106,8 @@ namespace ADO.Tests
 
                 var id1 = productsRepository.CreateProduct(createParams1);
                 var id2 = productsRepository.CreateProduct(createParams2);
+
+                productsRepository.Save();
 
                 var products = productsRepository.ListProducts();
 

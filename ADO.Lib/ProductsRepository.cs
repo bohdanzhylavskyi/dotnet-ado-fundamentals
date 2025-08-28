@@ -37,135 +37,136 @@ namespace ADO.Lib
     public class ProductsRepository
     {
         private string _connectionString;
+        private readonly SqlDataAdapter _adapter;
+        private readonly DataTable _productsTable;
+        private bool _isInitialized = false;
 
         public ProductsRepository(string connectionString)
         {
             this._connectionString = connectionString;
+            this._adapter = new SqlDataAdapter("SELECT * FROM Products", _connectionString);
+            this._productsTable = new DataTable();
+
+            var insertCommand = new SqlCommand(
+                "INSERT INTO Products (Name, Description, Weight, Height, Width, Length) " +
+                "OUTPUT INSERTED.Id " +
+                "VALUES (@Name, @Description, @Weight, @Height, @Width, @Length);",
+                new SqlConnection(_connectionString));
+
+            insertCommand.Parameters.Add("@Name", SqlDbType.NVarChar, 0, "Name");
+            insertCommand.Parameters.Add("@Description", SqlDbType.NVarChar, 0, "Description");
+            insertCommand.Parameters.Add("@Weight", SqlDbType.Decimal, 0, "Weight");
+            insertCommand.Parameters.Add("@Height", SqlDbType.Decimal, 0, "Height");
+            insertCommand.Parameters.Add("@Width", SqlDbType.Decimal, 0, "Width");
+            insertCommand.Parameters.Add("@Length", SqlDbType.Decimal, 0, "Length");
+
+            this._adapter.InsertCommand = insertCommand;
         }
 
         public Product? GetProduct(int productId)
         {
-            using (SqlConnection connection = new(_connectionString))
+            this.Init();
+
+            var row = this._productsTable.AsEnumerable().First(r => r.Field<int>("Id") == productId);
+
+            if (row == null)
             {
-                SqlCommand command = new("SELECT * FROM Products WHERE Id = @Id;", connection);
-
-                command.Parameters.AddWithValue("Id", productId);
-
-                connection.Open();
-
-                SqlDataReader reader = command.ExecuteReader();
-                Product? result = null;
-
-                if (reader.HasRows)
-                {
-                    while (reader.Read())
-                    {
-                        result = new Product()
-                        {
-                            Id = reader.GetInt32("Id"),
-                            Name = reader.GetString("Name"),
-                            Description = reader.GetString("Description"),
-                            Weight = reader.GetDecimal("Weight"),
-                            Height = reader.GetDecimal("Height"),
-                            Width = reader.GetDecimal("Width"),
-                            Length = reader.GetDecimal("Length"),
-                        };
-                    }
-                }
-
-                reader.Close();
-
-                return result;
+                return null;
             }
+
+            return new Product()
+            {
+                Id = row.Field<int>("Id"),
+                Name = row.Field<string>("Name"),
+                Description = row.Field<string>("Description"),
+                Height = row.Field<decimal>("Height"),
+                Weight = row.Field<decimal>("Weight"),
+                Width = row.Field<decimal>("Width"),
+                Length = row.Field<decimal>("Length"),
+            };
         }
 
         public int CreateProduct(CreateProductParams parameters)
         {
-            using (SqlConnection connection = new(this._connectionString))
-            {
-                SqlCommand command = new(
-                    "INSERT INTO Products (Name, Description, Weight, Height, Width, Length) " +
-                    "OUTPUT INSERTED.Id " +
-                    "VALUES (@Name, @Description, @Weight, @Height, @Width, @Length);", connection);
+            this.Init();
 
-                command.Parameters.AddWithValue("Name", parameters.Name);
-                command.Parameters.AddWithValue("Description", parameters.Description);
-                command.Parameters.AddWithValue("Weight", parameters.Weight);
-                command.Parameters.AddWithValue("Height", parameters.Height);
-                command.Parameters.AddWithValue("Width", parameters.Width);
-                command.Parameters.AddWithValue("Length", parameters.Length);
+            var row = this._productsTable.NewRow();
 
-                connection.Open();
+            row["Name"] = parameters.Name;
+            row["Description"] = parameters.Description;
+            row["Weight"] = parameters.Weight;
+            row["Height"] = parameters.Height;
+            row["Width"] = parameters.Width;
+            row["Length"] = parameters.Length;
 
-                return (int) command.ExecuteScalar();
-            }
+            this._productsTable.Rows.Add(row);
+
+            this.Save();
+
+            return (int)row["Id"]; 
         }
 
         public void UpdateProduct(int productId, UpdateProductParams parameters)
         {
-            using (SqlConnection connection = new(this._connectionString)) {
-                SqlCommand command = new(
-                "UPDATE Products SET Name=@Name, Description=@Description, Weight=@Weight, Height=@Height, Width=@Width, Length=@Length" +
-                " WHERE Id=@Id", connection);
+            this.Init();
 
-                command.Parameters.AddWithValue("Name", parameters.Name);
-                command.Parameters.AddWithValue("Description", parameters.Description);
-                command.Parameters.AddWithValue("Weight", parameters.Weight);
-                command.Parameters.AddWithValue("Height", parameters.Height);
-                command.Parameters.AddWithValue("Width", parameters.Width);
-                command.Parameters.AddWithValue("Length", parameters.Length);
-                command.Parameters.AddWithValue("Id", productId);
-                
-                connection.Open();
-                command.ExecuteNonQuery();
+            var row = this._productsTable.AsEnumerable().First(r => r.Field<int>("Id") == productId);
+
+            if (row != null)
+            {
+                row["Name"] = parameters.Name;
+                row["Description"] = parameters.Description;
+                row["Weight"] = parameters.Weight;
+                row["Height"] = parameters.Height;
+                row["Width"] = parameters.Width;
+                row["Length"] = parameters.Length;
             }
         }
 
         public void DeleteProduct(int productId)
         {
-            using (SqlConnection connection = new(this._connectionString))
+            this.Init();
+
+            var row = this._productsTable.AsEnumerable().First(r => r.Field<int>("Id") == productId);
+            
+            if (row != null)
             {
-                SqlCommand command = new(
-                    "DELETE FROM Products WHERE Id = @Id;", connection);
-
-                command.Parameters.AddWithValue("Id", productId);
-
-                connection.Open();
-                command.ExecuteNonQuery();
+                row.Delete();
             }
         }
 
         public List<Product> ListProducts()
         {
-            using (SqlConnection connection = new(_connectionString))
+            this.Init();
+
+            var products = this._productsTable.AsEnumerable().Select(r => new Product
             {
-                SqlCommand command = new("SELECT * FROM Products;", connection);
+                Id = r.Field<int>("Id"),
+                Name = r.Field<string>("Name"),
+                Description = r.Field<string>("Description"),
+                Height = r.Field<decimal>("Height"),
+                Weight = r.Field<decimal>("Weight"),
+                Width = r.Field<decimal>("Width"),
+                Length = r.Field<decimal>("Length"),
+            }).ToList();
 
-                connection.Open();
+            return products;
+        }
 
-                SqlDataReader reader = command.ExecuteReader();
-                var result = new List<Product>();
+        public void Save()
+        {
+            this._adapter.Update(this._productsTable);
+            this._productsTable.AcceptChanges();
+        }
 
-                if (reader.HasRows)
-                {
-                    while (reader.Read())
-                    {
-                        result.Add(new Product()
-                        {
-                            Id = reader.GetInt32("Id"),
-                            Name = reader.GetString("Name"),
-                            Description = reader.GetString("Description"),
-                            Weight = reader.GetDecimal("Weight"),
-                            Height = reader.GetDecimal("Height"),
-                            Width = reader.GetDecimal("Width"),
-                            Length = reader.GetDecimal("Length"),
-                        });
-                    }
-                }
+        private void Init()
+        {
+            if (!this._isInitialized)
+            {
+                var builder = new SqlCommandBuilder(this._adapter);
+                this._adapter.Fill(this._productsTable);
 
-                reader.Close();
-
-                return result;
+                this._isInitialized = true;
             }
         }
     }
