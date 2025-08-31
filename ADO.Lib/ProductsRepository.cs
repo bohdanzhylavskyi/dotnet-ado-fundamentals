@@ -3,29 +3,9 @@ using System.Data;
 
 namespace ADO.Lib
 {
-    public struct CreateProductParams
+    public class Product
     {
-        public required string Name;
-        public required string Description;
-        public required decimal Weight;
-        public required decimal Height;
-        public required decimal Width;
-        public required decimal Length;
-    }
-
-    public struct UpdateProductParams
-    {
-        public required string Name;
-        public required string Description;
-        public required decimal Weight;
-        public required decimal Height;
-        public required decimal Width;
-        public required decimal Length;
-    }
-
-    public struct Product
-    {
-        public required int Id;
+        public int Id { get; set; }
         public required string Name;
         public required string Description;
         public required decimal Weight;
@@ -63,63 +43,60 @@ namespace ADO.Lib
             this._adapter.InsertCommand = insertCommand;
         }
 
+        public void CreateProduct(Product product)
+        {
+            this.Init();
+
+            var row = this._productsTable.NewRow();
+
+            row["Name"] = product.Name;
+            row["Description"] = product.Description;
+            row["Weight"] = product.Weight;
+            row["Height"] = product.Height;
+            row["Width"] = product.Width;
+            row["Length"] = product.Length;
+
+            this._productsTable.Rows.Add(row);
+
+            this.Save();
+
+            product.Id = (int)row["Id"];
+        }
+        
         public Product? GetProduct(int productId)
         {
             this.Init();
 
             var row = this._productsTable.AsEnumerable().First(r => r.Field<int>("Id") == productId);
 
-            if (row == null)
-            {
-                return null;
-            }
-
-            return new Product()
-            {
-                Id = row.Field<int>("Id"),
-                Name = row.Field<string>("Name"),
-                Description = row.Field<string>("Description"),
-                Height = row.Field<decimal>("Height"),
-                Weight = row.Field<decimal>("Weight"),
-                Width = row.Field<decimal>("Width"),
-                Length = row.Field<decimal>("Length"),
-            };
+            return row != null
+                ? new Product()
+                {
+                    Id = row.Field<int>("Id"),
+                    Name = row.Field<string>("Name"),
+                    Description = row.Field<string>("Description"),
+                    Height = row.Field<decimal>("Height"),
+                    Weight = row.Field<decimal>("Weight"),
+                    Width = row.Field<decimal>("Width"),
+                    Length = row.Field<decimal>("Length"),
+                }
+                : null;
         }
 
-        public int CreateProduct(CreateProductParams parameters)
+        public void UpdateProduct(Product product)
         {
             this.Init();
 
-            var row = this._productsTable.NewRow();
-
-            row["Name"] = parameters.Name;
-            row["Description"] = parameters.Description;
-            row["Weight"] = parameters.Weight;
-            row["Height"] = parameters.Height;
-            row["Width"] = parameters.Width;
-            row["Length"] = parameters.Length;
-
-            this._productsTable.Rows.Add(row);
-
-            this.Save();
-
-            return (int)row["Id"]; 
-        }
-
-        public void UpdateProduct(int productId, UpdateProductParams parameters)
-        {
-            this.Init();
-
-            var row = this._productsTable.AsEnumerable().First(r => r.Field<int>("Id") == productId);
+            var row = this._productsTable.AsEnumerable().First(r => r.Field<int>("Id") == product.Id);
 
             if (row != null)
             {
-                row["Name"] = parameters.Name;
-                row["Description"] = parameters.Description;
-                row["Weight"] = parameters.Weight;
-                row["Height"] = parameters.Height;
-                row["Width"] = parameters.Width;
-                row["Length"] = parameters.Length;
+                row["Name"] = product.Name;
+                row["Description"] = product.Description;
+                row["Weight"] = product.Weight;
+                row["Height"] = product.Height;
+                row["Width"] = product.Width;
+                row["Length"] = product.Length;
             }
         }
 
@@ -128,7 +105,7 @@ namespace ADO.Lib
             this.Init();
 
             var row = this._productsTable.AsEnumerable().First(r => r.Field<int>("Id") == productId);
-            
+
             if (row != null)
             {
                 row.Delete();
@@ -161,13 +138,15 @@ namespace ADO.Lib
 
         private void Init()
         {
-            if (!this._isInitialized)
+            if (this._isInitialized)
             {
-                var builder = new SqlCommandBuilder(this._adapter);
-                this._adapter.Fill(this._productsTable);
-
-                this._isInitialized = true;
+                return;
             }
+
+            var builder = new SqlCommandBuilder(this._adapter);
+            this._adapter.Fill(this._productsTable);
+
+            this._isInitialized = true;
         }
     }
 }

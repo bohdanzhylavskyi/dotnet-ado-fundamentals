@@ -1,14 +1,14 @@
 ﻿using ADO.Lib;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using Microsoft.SqlServer.Dac;
 
 public class DatabaseFixture : IDisposable
 {
     public string ConnectionString { get; }
 
-    private string ServerConnectionString = "Server=EPUALVIW077B\\SQLSERVER2022;Integrated Security=true;TrustServerCertificate=True;";
-
-    private const string TestDbName = "test-ado-fundamentals";
+    private string ServerConnectionString;
+    private string TestDbName;
 
     public Product product1;
     public Product product2;
@@ -16,6 +16,16 @@ public class DatabaseFixture : IDisposable
 
     public DatabaseFixture()
     {
+        var folder = Directory.GetCurrentDirectory();
+
+        var config = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: false)
+            .Build();
+        
+        ServerConnectionString = config.GetConnectionString("ServerConnection");
+        TestDbName = config.GetSection("TestDbName").Value;
+
         ConnectionString = $"{ServerConnectionString}Database={TestDbName};";
 
         DeployDatabase();
@@ -25,10 +35,10 @@ public class DatabaseFixture : IDisposable
             Id = 0,
             Name = "Laptop Dell XPS 13",
             Description = "Ultra-portable laptop",
-            Weight = 1.25m,    // kg
-            Height = 1.5m,     // cm
-            Length = 30.2m,    // cm
-            Width = 20.0m      // cm
+            Weight = 1.25m,
+            Height = 1.5m,
+            Length = 30.2m,
+            Width = 20.0m
         };
 
         this.product2 = new Product()
@@ -36,10 +46,10 @@ public class DatabaseFixture : IDisposable
             Id = 1,
             Name = "Wooden Chair",
             Description = "Oak dining chair with cushion",
-            Weight = 6.5m,     // kg
-            Height = 95.0m,    // cm
-            Length = 45.0m,    // cm
-            Width = 50.0m      // cm
+            Weight = 6.5m,
+            Height = 95.0m,
+            Length = 45.0m,
+            Width = 50.0m
         };
 
         this.product3 = new Product()
@@ -47,26 +57,22 @@ public class DatabaseFixture : IDisposable
             Id = 2,
             Name = "Samsung 55'' QLED TV",
             Description = "Smart TV, 4K UHD, HDR10+",
-            Weight = 17.3m,   // kg
-            Height = 71.0m,   // cm
-            Length = 123.0m,  // cm
-            Width = 5.5m      // cm (panel thickness)
+            Weight = 17.3m,
+            Height = 71.0m,
+            Length = 123.0m,
+            Width = 5.5m
         };
 
     }
 
-    public void AddProducts()
+    public void SeedProducts()
     {
-        var product1Id = this.AddProduct(this.product1);
-        var product2Id = this.AddProduct(this.product2);
-        var product3Id = this.AddProduct(this.product3);
-
-        this.product1.Id = product1Id;
-        this.product2.Id = product2Id;
-        this.product3.Id = product3Id;
+        this.AddProduct(this.product1);
+        this.AddProduct(this.product2);
+        this.AddProduct(this.product3);
     }
 
-    private int AddProduct(Product product)
+    private void AddProduct(Product product)
     {
         using (SqlConnection connection = new(ConnectionString))
         {
@@ -84,14 +90,16 @@ public class DatabaseFixture : IDisposable
 
             connection.Open();
 
-            return (int) command.ExecuteScalar();
+            var id = (int)command.ExecuteScalar();
+
+            product.Id = id;
         }
     }
 
 
     private void DeployDatabase()
     {
-        string dacpacPath = @"..\..\..\..\ADO.DB\bin\Debug\ADO.dacpac";
+        string dacpacPath = @"..\..\..\..\ADO.DB\bin\Debug\ADO.DB.dacpac";
 
         using var dacpac = DacPackage.Load(dacpacPath);
         var dacServices = new DacServices(ServerConnectionString);
@@ -113,7 +121,4 @@ public class DatabaseFixture : IDisposable
 }
 
 [CollectionDefinition("Database collection")]
-public class DatabaseCollection : ICollectionFixture<DatabaseFixture>
-{
-    // no code needed here, xUnit just uses this as a marker
-}
+public class DatabaseCollection : ICollectionFixture<DatabaseFixture> {}

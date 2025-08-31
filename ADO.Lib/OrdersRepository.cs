@@ -14,25 +14,9 @@ namespace ADO.Lib
         Done
     }
 
-    public struct CreateOrderParams
+    public class Order
     {
-        public required OrderStatus Status;
-        public required DateTime CreatedDate;
-        public required DateTime UpdatedDate;
-        public required int ProductId;
-    }
-
-    public struct UpdateOrderParams
-    {
-        public required OrderStatus Status;
-        public required DateTime CreatedDate;
-        public required DateTime UpdatedDate;
-        public required int ProductId;
-    }
-
-    public struct Order
-    {
-        public required int Id;
+        public int Id { get; set; }
         public required OrderStatus Status;
         public required DateTime CreatedDate;
         public required DateTime UpdatedDate;
@@ -44,14 +28,9 @@ namespace ADO.Lib
         public int? Month { get; init; } = null;
         public int? Year { get; init; } = null;
         public OrderStatus? Status { get; init; } = null;
-
         public int? ProductId { get; init; } = null;
-        public OrderFilters()
-        {
-        }
+        public OrderFilters() {}
     }
-
-    public delegate SqlCommand CommandFactory(SqlConnection connection);
 
     public class OrdersRepository
     {
@@ -62,13 +41,36 @@ namespace ADO.Lib
             this._connectionString = connectionString;
         }
 
-        public Order? GetOrder(int productId)
+        public void CreateOrder(Order order)
+        {
+            using (SqlConnection connection = new(this._connectionString))
+            {
+                SqlCommand command = new(
+                    "INSERT INTO Orders (Status, CreatedDate, UpdatedDate, ProductId) " +
+                    "OUTPUT INSERTED.Id " +
+                    "VALUES (@Status, @CreatedDate, @UpdatedDate, @ProductId);", connection);
+
+                command.Parameters.AddWithValue("Status", order.Status.ToString());
+                command.Parameters.AddWithValue("CreatedDate", order.CreatedDate);
+                command.Parameters.AddWithValue("UpdatedDate", order.UpdatedDate);
+                command.Parameters.AddWithValue("ProductId", order.ProductId);
+
+                connection.Open();
+
+                var id = (int)command.ExecuteScalar();
+
+                order.Id = id;
+            }
+        }
+
+
+        public Order? GetOrder(int orderId)
         {
             using (SqlConnection connection = new(_connectionString))
             {
                 SqlCommand command = new("SELECT * FROM Orders WHERE Id = @Id;", connection);
 
-                command.Parameters.AddWithValue("Id", productId);
+                command.Parameters.AddWithValue("Id", orderId);
 
                 connection.Open();
 
@@ -96,26 +98,7 @@ namespace ADO.Lib
             }
         }
 
-        public int CreateOrder(CreateOrderParams parameters)
-        {
-            using (SqlConnection connection = new(this._connectionString))
-            {
-                SqlCommand command = new(
-                    "INSERT INTO Orders (Status, CreatedDate, UpdatedDate, ProductId) " +
-                    "OUTPUT INSERTED.Id " +
-                    "VALUES (@Status, @CreatedDate, @UpdatedDate, @ProductId);", connection);
-
-                command.Parameters.AddWithValue("Status", parameters.Status.ToString());
-                command.Parameters.AddWithValue("CreatedDate", parameters.CreatedDate);
-                command.Parameters.AddWithValue("UpdatedDate", parameters.UpdatedDate);
-                command.Parameters.AddWithValue("ProductId", parameters.ProductId);
-
-                connection.Open();
-                return (int)command.ExecuteScalar();
-            }
-        }
-
-        public void UpdateOrder(int orderId, UpdateOrderParams parameters)
+        public void UpdateOrder(Order order)
         {
             using (SqlConnection connection = new(this._connectionString))
             {
@@ -123,11 +106,11 @@ namespace ADO.Lib
                 "UPDATE Orders SET Status=@Status, CreatedDate=@CreatedDate, UpdatedDate=@UpdatedDate, ProductId=@ProductId" +
                 " WHERE Id=@Id", connection);
 
-                command.Parameters.AddWithValue("Status", parameters.Status.ToString());
-                command.Parameters.AddWithValue("CreatedDate", parameters.CreatedDate);
-                command.Parameters.AddWithValue("UpdatedDate", parameters.UpdatedDate);
-                command.Parameters.AddWithValue("ProductId", parameters.ProductId);
-                command.Parameters.AddWithValue("Id", orderId);
+                command.Parameters.AddWithValue("Status", order.Status.ToString());
+                command.Parameters.AddWithValue("CreatedDate", order.CreatedDate);
+                command.Parameters.AddWithValue("UpdatedDate", order.UpdatedDate);
+                command.Parameters.AddWithValue("ProductId", order.ProductId);
+                command.Parameters.AddWithValue("Id", order.Id);
 
                 connection.Open();
                 command.ExecuteNonQuery();

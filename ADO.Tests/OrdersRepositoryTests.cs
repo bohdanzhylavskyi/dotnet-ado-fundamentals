@@ -7,23 +7,22 @@ namespace ADO.Tests
     public class OrdersRepositoryTests
     {
         private readonly DatabaseFixture _fixture;
+        private readonly OrdersRepository _repository;
 
         public OrdersRepositoryTests(DatabaseFixture fixture)
         {
             _fixture = fixture;
+            _repository = new OrdersRepository(this._fixture.ConnectionString);
         }
-
 
         [Fact]
         public void CreateOrder()
         {
-            var ordersRepository = new OrdersRepository(this._fixture.ConnectionString);
-
             using (var scope = new TransactionScope())
             {
-                this._fixture.AddProducts();
+                this._fixture.SeedProducts();
 
-                var createParams = new CreateOrderParams()
+                var order = new Order()
                 {
                     ProductId = _fixture.product1.Id,
                     CreatedDate = DateTime.Now,
@@ -31,68 +30,79 @@ namespace ADO.Tests
                     Status = OrderStatus.NotStarted,
                 };
 
-                var id = ordersRepository.CreateOrder(createParams);
+                // act
+                _repository.CreateOrder(order);
 
-                var order = ordersRepository.GetOrder(id);
+                // assert
+                var createdOrder = _repository.GetOrder(order.Id);
 
-                Assert.NotNull(order);
+                Assert.NotNull(createdOrder);
+            }
+        }
+
+        [Fact]
+        public void GetOrder()
+        {
+            using (var scope = new TransactionScope())
+            {
+                this._fixture.SeedProducts();
+
+                var order = new Order()
+                {
+                    ProductId = _fixture.product1.Id,
+                    CreatedDate = DateTime.Now,
+                    UpdatedDate = DateTime.Now,
+                    Status = OrderStatus.NotStarted,
+                };
+
+                _repository.CreateOrder(order);
+
+                // act
+                var createdOrder = _repository.GetOrder(order.Id);
+
+                Assert.NotNull(createdOrder);
             }
         }
 
         [Fact]
         public void UpdateOrder()
         {
-            var ordersRepository = new OrdersRepository(this._fixture.ConnectionString);
-
             using (var scope = new TransactionScope())
             {
-                this._fixture.AddProducts();
+                this._fixture.SeedProducts();
 
-                var createParams = new CreateOrderParams()
+                var order = new Order()
                 {
                     ProductId = _fixture.product1.Id,
-                    CreatedDate = DateTime.Now,
-                    UpdatedDate = DateTime.Now,
+                    CreatedDate = DateTime.Parse("2022-01-21 00:00:00"),
+                    UpdatedDate = DateTime.Parse("2022-05-10 00:00:00"),
                     Status = OrderStatus.NotStarted,
                 };
 
-                var id = ordersRepository.CreateOrder(createParams);
+                _repository.CreateOrder(order);
 
-                var updateParams = new UpdateOrderParams()
-                {
-                    CreatedDate = DateTime.Parse("2025-08-26 14:45:30"),
-                    UpdatedDate = DateTime.Parse("2025-08-28 14:45:30"),
-                    ProductId = createParams.ProductId,
-                    Status = OrderStatus.Arrived,
-                };
+                // act
+                order.CreatedDate = DateTime.Parse("2025-08-26 14:45:30");
+                order.UpdatedDate = DateTime.Parse("2025-08-28 14:45:30");
+                order.Status = OrderStatus.Arrived;
 
-                ordersRepository.UpdateOrder(id, updateParams);
+                _repository.UpdateOrder(order);
 
+                // assert
+                var retrievedOrder = _repository.GetOrder(order.Id);
 
-                var expectedOrder = new Order() {
-                    Id = id,
-                    ProductId = createParams.ProductId,
-                    CreatedDate = DateTime.Parse("2025-08-26 14:45:30"),
-                    UpdatedDate = DateTime.Parse("2025-08-28 14:45:30"),
-                    Status = OrderStatus.Arrived,
-                };
-
-                var updatedOrder = ordersRepository.GetOrder(id);
-
-                Assert.Equal(expectedOrder, updatedOrder);
+                Assert.Equivalent(order, retrievedOrder);
             }
         }
 
         [Fact]
         public void DeleteOrder()
         {
-            var repository = new OrdersRepository(this._fixture.ConnectionString);
-
             using (var scope = new TransactionScope())
             {
-                this._fixture.AddProducts();
+                this._fixture.SeedProducts();
 
-                var createParams = new CreateOrderParams()
+                var order = new Order()
                 {
                     ProductId = _fixture.product1.Id,
                     CreatedDate = DateTime.Now,
@@ -100,26 +110,25 @@ namespace ADO.Tests
                     Status = OrderStatus.NotStarted,
                 };
 
-                var id = repository.CreateOrder(createParams);
+                _repository.CreateOrder(order);
 
-                repository.DeleteOrder(id);
+                // act
+                _repository.DeleteOrder(order.Id);
 
-                var orders = repository.ListOrders();
+                var orders = _repository.ListOrders();
 
-                Assert.DoesNotContain(orders, o => o.Id == id);
+                Assert.DoesNotContain(orders, o => o.Id == order.Id);
             }
         }
 
         [Fact]
         public void ListOrders()
         {
-            var repository = new OrdersRepository(this._fixture.ConnectionString);
-
             using (var scope = new TransactionScope())
             {
-                this._fixture.AddProducts();
+                this._fixture.SeedProducts();
 
-                var createParams1 = new CreateOrderParams()
+                var order1 = new Order()
                 {
                     ProductId = _fixture.product1.Id,
                     CreatedDate = DateTime.Now,
@@ -127,9 +136,9 @@ namespace ADO.Tests
                     Status = OrderStatus.NotStarted,
                 };
 
-                var id1 = repository.CreateOrder(createParams1);
+                _repository.CreateOrder(order1);
 
-                var createParams2 = new CreateOrderParams()
+                var order2 = new Order()
                 {
                     ProductId = _fixture.product2.Id,
                     CreatedDate = DateTime.Now,
@@ -137,25 +146,24 @@ namespace ADO.Tests
                     Status = OrderStatus.Arrived,
                 };
 
-                var id2 = repository.CreateOrder(createParams2);
+                _repository.CreateOrder(order2);
 
-                var orders = repository.ListOrders();
+                // act
+                var orders = _repository.ListOrders();
 
-                Assert.Contains(orders, (p) => p.Id == id1);
-                Assert.Contains(orders, (p) => p.Id == id2);
+                Assert.Contains(orders, (o) => o.Id == order1.Id);
+                Assert.Contains(orders, (o) => o.Id == order2.Id);
             }
         }
 
         [Fact]
         public void SearchOrdersByMonth()
         {
-            var repository = new OrdersRepository(this._fixture.ConnectionString);
-
             using (var scope = new TransactionScope())
             {
-                this._fixture.AddProducts();
+                this._fixture.SeedProducts();
 
-                var createParams1 = new CreateOrderParams()
+                var order1 = new Order()
                 {
                     ProductId = _fixture.product1.Id,
                     CreatedDate = DateTime.Parse("01/26/2025 2:30:00 PM"),
@@ -163,9 +171,9 @@ namespace ADO.Tests
                     Status = OrderStatus.NotStarted,
                 };
 
-                var id1 = repository.CreateOrder(createParams1);
+                _repository.CreateOrder(order1);
 
-                var createParams2 = new CreateOrderParams()
+                var order2 = new Order()
                 {
                     ProductId = _fixture.product2.Id,
                     CreatedDate = DateTime.Parse("08/26/2025 2:30:00 PM"),
@@ -173,25 +181,24 @@ namespace ADO.Tests
                     Status = OrderStatus.Arrived,
                 };
 
-                var id2 = repository.CreateOrder(createParams2);
+                _repository.CreateOrder(order2);
 
-                var orders = repository.SearchOrdersByMonth(8);
+                // act
+                var orders = _repository.SearchOrdersByMonth(8);
 
                 Assert.Equal(1, orders.Count);
-                Assert.Contains(orders, (p) => p.Id == id2);
+                Assert.Contains(orders, (o) => o.Id == order2.Id);
             }
         }
 
         [Fact]
         public void SearchOrdersByYear()
         {
-            var repository = new OrdersRepository(this._fixture.ConnectionString);
-
             using (var scope = new TransactionScope())
             {
-                this._fixture.AddProducts();
+                this._fixture.SeedProducts();
 
-                var createParams1 = new CreateOrderParams()
+                var order1 = new Order()
                 {
                     ProductId = _fixture.product1.Id,
                     CreatedDate = DateTime.Parse("01/26/2022 2:30:00 PM"),
@@ -199,9 +206,9 @@ namespace ADO.Tests
                     Status = OrderStatus.NotStarted,
                 };
 
-                var id1 = repository.CreateOrder(createParams1);
+                _repository.CreateOrder(order1);
 
-                var createParams2 = new CreateOrderParams()
+                var order2 = new Order()
                 {
                     ProductId = _fixture.product2.Id,
                     CreatedDate = DateTime.Parse("08/26/2025 2:30:00 PM"),
@@ -209,26 +216,24 @@ namespace ADO.Tests
                     Status = OrderStatus.Arrived,
                 };
 
-                var id2 = repository.CreateOrder(createParams2);
+                _repository.CreateOrder(order2);
 
-                var orders = repository.SearchOrdersByYear(2025);
-
+                // act
+                var orders = _repository.SearchOrdersByYear(2025);
 
                 Assert.Equal(1, orders.Count);
-                Assert.Contains(orders, (p) => p.Id == id2);
+                Assert.Contains(orders, (o) => o.Id == order2.Id);
             }
         }
 
         [Fact]
         public void SearchOrdersByStatus()
         {
-            var repository = new OrdersRepository(this._fixture.ConnectionString);
-
             using (var scope = new TransactionScope())
             {
-                this._fixture.AddProducts();
+                this._fixture.SeedProducts();
 
-                var createParams1 = new CreateOrderParams()
+                var order1 = new Order()
                 {
                     ProductId = _fixture.product1.Id,
                     CreatedDate = DateTime.Parse("01/26/2022 2:30:00 PM"),
@@ -236,9 +241,9 @@ namespace ADO.Tests
                     Status = OrderStatus.NotStarted,
                 };
 
-                var id1 = repository.CreateOrder(createParams1);
+                _repository.CreateOrder(order1);
 
-                var createParams2 = new CreateOrderParams()
+                var order2 = new Order()
                 {
                     ProductId = _fixture.product2.Id,
                     CreatedDate = DateTime.Parse("08/26/2025 2:30:00 PM"),
@@ -246,26 +251,24 @@ namespace ADO.Tests
                     Status = OrderStatus.Arrived,
                 };
 
-                var id2 = repository.CreateOrder(createParams2);
+                _repository.CreateOrder(order2);
 
-                var orders = repository.SearchOrdersByStatus(OrderStatus.Arrived);
-
+                // act
+                var orders = _repository.SearchOrdersByStatus(OrderStatus.Arrived);
 
                 Assert.Equal(1, orders.Count);
-                Assert.Contains(orders, (p) => p.Id == id2);
+                Assert.Contains(orders, (o) => o.Id == order2.Id);
             }
         }
 
         [Fact]
         public void SearchOrdersByProduct()
         {
-            var repository = new OrdersRepository(this._fixture.ConnectionString);
-
             using (var scope = new TransactionScope())
             {
-                this._fixture.AddProducts();
+                this._fixture.SeedProducts();
 
-                var createParams1 = new CreateOrderParams()
+                var order1 = new Order()
                 {
                     ProductId = _fixture.product1.Id,
                     CreatedDate = DateTime.Parse("01/26/2022 2:30:00 PM"),
@@ -273,9 +276,9 @@ namespace ADO.Tests
                     Status = OrderStatus.NotStarted,
                 };
 
-                var id1 = repository.CreateOrder(createParams1);
+                _repository.CreateOrder(order1);
 
-                var createParams2 = new CreateOrderParams()
+                var order2 = new Order()
                 {
                     ProductId = _fixture.product2.Id,
                     CreatedDate = DateTime.Parse("08/26/2025 2:30:00 PM"),
@@ -283,25 +286,24 @@ namespace ADO.Tests
                     Status = OrderStatus.Arrived,
                 };
 
-                var id2 = repository.CreateOrder(createParams2);
+                _repository.CreateOrder(order2);
 
-                var orders = repository.SearchOrdersByProduct(_fixture.product2.Id);
+                // act
+                var orders = _repository.SearchOrdersByProduct(_fixture.product2.Id);
 
                 Assert.Equal(1, orders.Count);
-                Assert.Contains(orders, (p) => p.Id == id2);
+                Assert.Contains(orders, (o) => o.Id == order2.Id);
             }
         }
 
         [Fact]
         public void DeleteOrdersByMonth()
         {
-            var repository = new OrdersRepository(this._fixture.ConnectionString);
-
             using (var scope = new TransactionScope())
             {
-                this._fixture.AddProducts();
+                this._fixture.SeedProducts();
 
-                var createParams1 = new CreateOrderParams()
+                var order1 = new Order()
                 {
                     ProductId = _fixture.product1.Id,
                     CreatedDate = DateTime.Parse("01/26/2025 2:30:00 PM"),
@@ -309,9 +311,9 @@ namespace ADO.Tests
                     Status = OrderStatus.NotStarted,
                 };
 
-                var id1 = repository.CreateOrder(createParams1);
+                _repository.CreateOrder(order1);
 
-                var createParams2 = new CreateOrderParams()
+                var order2 = new Order()
                 {
                     ProductId = _fixture.product2.Id,
                     CreatedDate = DateTime.Parse("08/26/2025 2:30:00 PM"),
@@ -319,27 +321,27 @@ namespace ADO.Tests
                     Status = OrderStatus.Arrived,
                 };
 
-                var id2 = repository.CreateOrder(createParams2);
+                _repository.CreateOrder(order2);
 
-                repository.DeleteOrdersByMonth(1);
+                // act
+                _repository.DeleteOrdersByMonth(1);
 
-                var orders = repository.ListOrders();
+                // assert
+                var orders = _repository.ListOrders();
 
                 Assert.Equal(1, orders.Count);
-                Assert.Contains(orders, (p) => p.Id == id2);
+                Assert.Contains(orders, (o) => o.Id == order2.Id);
             }
         }
 
         [Fact]
         public void DeleteOrdersByYear()
         {
-            var repository = new OrdersRepository(this._fixture.ConnectionString);
-
             using (var scope = new TransactionScope())
             {
-                this._fixture.AddProducts();
+                this._fixture.SeedProducts();
 
-                var createParams1 = new CreateOrderParams()
+                var order1 = new Order()
                 {
                     ProductId = _fixture.product1.Id,
                     CreatedDate = DateTime.Parse("01/26/2020 2:30:00 PM"),
@@ -347,9 +349,9 @@ namespace ADO.Tests
                     Status = OrderStatus.NotStarted,
                 };
 
-                var id1 = repository.CreateOrder(createParams1);
+                _repository.CreateOrder(order1);
 
-                var createParams2 = new CreateOrderParams()
+                var order2 = new Order()
                 {
                     ProductId = _fixture.product2.Id,
                     CreatedDate = DateTime.Parse("08/26/2026 2:30:00 PM"),
@@ -357,27 +359,27 @@ namespace ADO.Tests
                     Status = OrderStatus.Arrived,
                 };
 
-                var id2 = repository.CreateOrder(createParams2);
+                _repository.CreateOrder(order2);
 
-                repository.DeleteOrdersByYear(2020);
+                // act
+                _repository.DeleteOrdersByYear(2020);
 
-                var orders = repository.ListOrders();
+                // assert
+                var orders = _repository.ListOrders();
 
                 Assert.Equal(1, orders.Count);
-                Assert.Contains(orders, (p) => p.Id == id2);
+                Assert.Contains(orders, (o) => o.Id == order2.Id);
             }
         }
 
         [Fact]
         public void DeleteOrdersByStatus()
         {
-            var repository = new OrdersRepository(this._fixture.ConnectionString);
-
             using (var scope = new TransactionScope())
             {
-                this._fixture.AddProducts();
+                this._fixture.SeedProducts();
 
-                var createParams1 = new CreateOrderParams()
+                var order1 = new Order()
                 {
                     ProductId = _fixture.product1.Id,
                     CreatedDate = DateTime.Parse("01/26/2020 2:30:00 PM"),
@@ -385,9 +387,9 @@ namespace ADO.Tests
                     Status = OrderStatus.NotStarted,
                 };
 
-                var id1 = repository.CreateOrder(createParams1);
+                _repository.CreateOrder(order1);
 
-                var createParams2 = new CreateOrderParams()
+                var order2 = new Order()
                 {
                     ProductId = _fixture.product2.Id,
                     CreatedDate = DateTime.Parse("08/26/2026 2:30:00 PM"),
@@ -395,27 +397,27 @@ namespace ADO.Tests
                     Status = OrderStatus.Arrived,
                 };
 
-                var id2 = repository.CreateOrder(createParams2);
+                _repository.CreateOrder(order2);
 
-                repository.DeleteOrdersByStatus(OrderStatus.NotStarted);
+                // act
+                _repository.DeleteOrdersByStatus(OrderStatus.NotStarted);
 
-                var orders = repository.ListOrders();
+                // assert
+                var orders = _repository.ListOrders();
 
                 Assert.Equal(1, orders.Count);
-                Assert.Contains(orders, (p) => p.Id == id2);
+                Assert.Contains(orders, (o) => o.Id == order2.Id);
             }
         }
 
         [Fact]
         public void DeleteOrdersByProduct()
         {
-            var repository = new OrdersRepository(this._fixture.ConnectionString);
-
             using (var scope = new TransactionScope())
             {
-                this._fixture.AddProducts();
+                this._fixture.SeedProducts();
 
-                var createParams1 = new CreateOrderParams()
+                var order1 = new Order()
                 {
                     ProductId = _fixture.product1.Id,
                     CreatedDate = DateTime.Parse("01/26/2020 2:30:00 PM"),
@@ -423,9 +425,9 @@ namespace ADO.Tests
                     Status = OrderStatus.NotStarted,
                 };
 
-                var id1 = repository.CreateOrder(createParams1);
+                _repository.CreateOrder(order1);
 
-                var createParams2 = new CreateOrderParams()
+                var order2 = new Order()
                 {
                     ProductId = _fixture.product2.Id,
                     CreatedDate = DateTime.Parse("08/26/2026 2:30:00 PM"),
@@ -433,14 +435,16 @@ namespace ADO.Tests
                     Status = OrderStatus.Arrived,
                 };
 
-                var id2 = repository.CreateOrder(createParams2);
+                _repository.CreateOrder(order2);
 
-                repository.DeleteOrdersByProduct(_fixture.product1.Id);
+                // act
+                _repository.DeleteOrdersByProduct(_fixture.product1.Id);
 
-                var orders = repository.ListOrders();
+                // assert
+                var orders = _repository.ListOrders();
 
                 Assert.Equal(1, orders.Count);
-                Assert.Contains(orders, (p) => p.Id == id2);
+                Assert.Contains(orders, (o) => o.Id == order2.Id);
             }
         }
     }

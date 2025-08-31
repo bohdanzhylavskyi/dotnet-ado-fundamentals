@@ -7,118 +7,122 @@ namespace ADO.Tests
     public class ProductsRepositoryTests
     {
         private readonly DatabaseFixture _fixture;
+        private readonly ProductsRepository _repository;
 
         public ProductsRepositoryTests(DatabaseFixture fixture)
         {
             _fixture = fixture;
+            _repository = new ProductsRepository(this._fixture.ConnectionString);
         }
 
 
         [Fact]
         public void CreateProduct()
         {
-            var productsRepository = new ProductsRepository(this._fixture.ConnectionString);
-
             using (var scope = new TransactionScope())
             {
-                var createParams = GetCreateProductParams();
+                var product = ProductStub();
 
-                var id = productsRepository.CreateProduct(createParams);
-                productsRepository.Save();
+                // act
+                _repository.CreateProduct(product);
+                _repository.Save();
 
-                var product = productsRepository.GetProduct(id);
+                // assert
+                var retrievedProduct = _repository.GetProduct(product.Id);
 
-                Assert.NotNull(product);
-                Assert.Equal(createParams.Name, product?.Name);
+                Assert.Equivalent(product, retrievedProduct);
+            }
+        }
+
+        [Fact]
+        public void GetProduct()
+        {
+            using (var scope = new TransactionScope())
+            {
+                var product = ProductStub();
+
+                _repository.CreateProduct(product);
+                _repository.Save();
+
+                // act
+                var retrievedProduct = _repository.GetProduct(product.Id);
+
+                Assert.Equivalent(product, retrievedProduct);
             }
         }
 
         [Fact]
         public void UpdateProduct()
         {
-            var productsRepository = new ProductsRepository(this._fixture.ConnectionString);
-
             using (var scope = new TransactionScope())
             {
-                var createParams = GetCreateProductParams();
+                var product = ProductStub();
 
-                var id = productsRepository.CreateProduct(createParams);
-                var updateParams = new UpdateProductParams()
-                {
-                    Name = "x",
-                    Description = "x",
-                    Height = 1m,
-                    Weight = 2m,
-                    Length = 3m,
-                    Width = 4m,
-                };
+                _repository.CreateProduct(product);
 
-                productsRepository.UpdateProduct(id, updateParams);
-                productsRepository.Save();
+                // act
+                product.Name = "x";
+                product.Description = "x";
+                product.Height = 1m;
+                product.Weight = 2m;
+                product.Length = 3m;
+                product.Width = 4m;
 
-                var expectedUpdatedProduct = new Product()
-                {
-                    Id = id,
-                    Name = updateParams.Name,
-                    Description = updateParams.Description,
-                    Height = updateParams.Height,
-                    Weight = updateParams.Weight,
-                    Length = updateParams.Length,
-                    Width = updateParams.Width,
-                };
+                _repository.UpdateProduct(product);
+                _repository.Save();
 
-                var product = productsRepository.GetProduct(id);
+                // assert
+                var retrievedProduct = _repository.GetProduct(product.Id);
 
-                Assert.Equal(expectedUpdatedProduct, product);
+                Assert.Equivalent(product, retrievedProduct);
             }
         }
 
         [Fact]
         public void DeleteProduct()
         {
-            var productsRepository = new ProductsRepository(this._fixture.ConnectionString);
-
             using (var scope = new TransactionScope())
             {
-                var createParams = GetCreateProductParams();
+                var product = ProductStub();
 
-                var id = productsRepository.CreateProduct(createParams);
-                productsRepository.Save();
+                _repository.CreateProduct(product);
+                _repository.Save();
 
-                productsRepository.DeleteProduct(id);
-                productsRepository.Save();
+                // act
+                _repository.DeleteProduct(product.Id);
+                _repository.Save();
 
-                var products = productsRepository.ListProducts();
+                // assert
+                var products = _repository.ListProducts();
 
-                Assert.DoesNotContain(products, p => p.Id == id);
+                Assert.DoesNotContain(products, p => p.Id == product.Id);
             }
         }
 
         [Fact]
         public void ListProducts()
         {
-            var productsRepository = new ProductsRepository(this._fixture.ConnectionString);
-
             using (var scope = new TransactionScope())
             {
-                var createParams1 = GetCreateProductParams();
-                var createParams2 = GetCreateProductParams();
+                var product1 = ProductStub();
+                var product2 = ProductStub();
 
-                var id1 = productsRepository.CreateProduct(createParams1);
-                var id2 = productsRepository.CreateProduct(createParams2);
+                _repository.CreateProduct(product1);
+                _repository.CreateProduct(product2);
 
-                productsRepository.Save();
+                _repository.Save();
 
-                var products = productsRepository.ListProducts();
+                // act
+                var products = _repository.ListProducts();
 
-                Assert.Contains(products, (p) => p.Id == id1);
-                Assert.Contains(products, (p) => p.Id == id2);
+                Assert.Contains(products, (p) => p.Id == product1.Id);
+                Assert.Contains(products, (p) => p.Id == product2.Id);
             }
         }
 
-        private CreateProductParams GetCreateProductParams()
+        private Product ProductStub()
         {
-            var createParams = new CreateProductParams
+            return new Product()
             {
                 Name = "iPhone 15",
                 Description = "Latest Apple smartphone",
@@ -127,8 +131,6 @@ namespace ADO.Tests
                 Length = 7.1m,
                 Width = 0.75m
             };
-
-            return createParams;
         }
     }
 }
